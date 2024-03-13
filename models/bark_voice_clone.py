@@ -1700,20 +1700,25 @@ class AudioGenerator:
 
 
 class BarkVoiceCloning:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, device='cpu'):
+        # Initialize the device for the class
+        self.device = torch.device(device)
 
-    def clone_voice(self, prompt, voice_name, input_audio_file, model_loader=None, gpu_id=0):
-        device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)  # Ensure that only the specific GPU is visible to this script
+    def clone_voice(self, prompt, voice_name, input_audio_file, model_loader=None):
+        # Ensure the model_loader is using the specified device
+        if model_loader is not None:
+            model_loader.device = self.device  # Update model_loader's device
+            model_loader.model.to(self.device)  # Move model to specified device
+            model_loader.hubert_model.to(self.device)
+            model_loader.tokenizer.to(self.device)
         
-        # model_loader = ModelLoader(device)
         # Process audio
         try:
-            audio_processor = AudioProcessor(input_audio_file, model_loader.model, device)
+            audio_processor = AudioProcessor(input_audio_file, model_loader.model, self.device)
             processed_audio = audio_processor.process_audio()
-        except:
-            raise Exception(f"Audio file not found or model issue: {model_loader.model}")
+        except Exception as e:
+            raise Exception(f"Audio processing failed: {e}")
+        
         # Generate semantic tokens
         semantic_generator = SemanticGenerator(model_loader.hubert_model, model_loader.tokenizer, processed_audio, model_loader.model)
         semantic_tokens = semantic_generator.generate_semantic_tokens()
@@ -1725,15 +1730,14 @@ class BarkVoiceCloning:
         # Get the current file location
         current_file_location = os.path.dirname(os.path.abspath(__file__))
 
-        # Create 'assets' and 'prompts' directories
+        # Save prompts
         assets_directory = os.path.join(current_file_location, 'assets')
         prompts_directory = os.path.join(assets_directory, 'prompts')
-
         os.makedirs(prompts_directory, exist_ok=True)
-
-        # Save prompts
         output_path = os.path.join(prompts_directory, voice_name + '.npz')
-        np.savez(output_path, fine_prompt=codes.cpu(), coarse_prompt=codes[:2, :].cpu(), semantic_prompt=semantic_tokens.cpu())
+        np.savez(output_path, fine_prompt=codes.cpu().numpy(), coarse_prompt=codes[:2, :].cpu().numpy(), semantic_prompt=semantic_tokens.cpu().numpy())
+
+        # Generate audio from text prompt
         audio_generator = AudioGenerator(prompt, voice_name)
         audio_array = audio_generator.generate_audio()
 

@@ -1631,16 +1631,20 @@ class AudioProcessor:
 
 
 class SemanticGenerator:
-   def __init__(self, hubert_model, tokenizer, wav, model):
-       self.hubert_model = hubert_model
-       self.tokenizer = tokenizer
-       self.wav = wav
-       self.model = model
+   def __init__(self, hubert_model, tokenizer, wav, model, device):
+       self.hubert_model = hubert_model.to(device)
+       self.tokenizer = tokenizer.to(device)
+       self.wav = wav.to(device)
+       self.model = model.to(device)
+       self.device = device  # Make sure to add and use the device attribute
 
    def generate_semantic_tokens(self):
+       # Ensure device is used properly within methods
+       self.wav = self.wav.to(self.device)  # Ensure the data is on the correct device
        semantic_vectors = self.hubert_model.forward(self.wav, input_sample_hz=self.model.sample_rate)
        semantic_tokens = self.tokenizer.get_token(semantic_vectors)
        return semantic_tokens
+
 
 class Encoder:
    def __init__(self, model, wav):

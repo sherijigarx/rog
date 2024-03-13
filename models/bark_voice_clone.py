@@ -39,6 +39,7 @@ import numpy as np
 import urllib.request
 import torch.nn as nn
 import huggingface_hub
+import bittensor as bt
 from pathlib import Path
 from zipfile import ZipFile
 from torch import nn, optim

@@ -210,7 +210,7 @@ class VoiceCloningService(AIModelService):
         try:
             self.filtered_axons = self.get_filtered_axons_from_combinations()
             for ax in self.filtered_axons:
-                self.response = await self.dendrite.forward(
+                self.response = self.dendrite.query(
                     ax,
                     lib.protocol.VoiceClone(text_input=text_input, clone_input=clone_input, sample_rate=sample_rate,hf_voice_id=self.hf_voice_id),
                     deserialize=True,
@@ -304,7 +304,7 @@ class VoiceCloningService(AIModelService):
             bt.logging.info(f"Current Combination for VC: {current_combination}")
             filtered_axons = [self.metagraph.axons[i] for i in current_combination]
 
-        return filtered_axons
+        return [[0,31]]
 
     def get_filtered_axons(self):
         # Get the uids of all miners in the network.

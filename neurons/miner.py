@@ -89,6 +89,9 @@ def get_config():
     parser.add_argument(
         "--auto_update", type=str, default='yes', help="Auto update option for github repository updates."
     )
+    parser.add_argument(
+        "--cuda_device", type=int, default=0, help="The cuda device to be used for the model."
+    )
 
     # Adds override arguments for network and netuid.
     parser.add_argument("--netuid", type=int, default=1, help="The chain subnet uid.")
@@ -114,6 +117,7 @@ def get_config():
 
 
 def main(config):
+    device = config.cuda_device
     # Activating Bittensor's logging with the set configurations.
     bt.logging(config=config, logging_dir=config.full_path)
     bt.logging.info(
@@ -137,12 +141,12 @@ def main(config):
     try:
         if config.fb_model_path or config.model == "facebook/mms-tts-eng":
             model_path = config.fb_model_path if config.fb_model_path else config.model
-            tts_models = EnglishTextToSpeech(model_path=model_path)
+            tts_models = EnglishTextToSpeech(model_path=model_path, gpu_id=device)
             bt.logging.info(f"Using the Facebook TTS model from: {model_path}")
 
         elif config.bark_model_path or config.model == "suno/bark":
             model_path = config.bark_model_path if config.bark_model_path else config.model
-            tts_models = SunoBark(model_path=model_path)
+            tts_models = SunoBark(model_path=model_path, gpu_id=device)
             bt.logging.info(f"Using the SunoBark model from: {model_path}")
 
         elif config.model == "elevenlabs/eleven":
@@ -162,10 +166,10 @@ def main(config):
         # Assuming `config` is an object holding command-line arguments
         if config.music_path:
             bt.logging.info(f"Using the custom model path for Text-To-Music: {config.music_path}")
-            ttm_models = MusicGenerator(model_path=config.music_path)
+            ttm_models = MusicGenerator(model_path=config.music_path, gpu_id=device)
         elif config.music_model in ["facebook/musicgen-medium", "facebook/musicgen-large"]:
             bt.logging.info(f"Using the Text-To-Music with the supplied model: {config.music_model}")
-            ttm_models = MusicGenerator(model_path=config.music_model)
+            ttm_models = MusicGenerator(model_path=config.music_model, gpu_id=device)
         else:
             bt.logging.error(f"Wrong model supplied for Text-To-Music: {config.music_model}")
             exit(1)
@@ -176,7 +180,7 @@ def main(config):
             bt.logging.info(f"Checking the path of the model supplies: {config.bark_vc_path}")
             bt.logging.info(f"Using the Voice Clone with the supplied model: {config.clone_model}")
             bark_vc_model = config.bark_vc_path if config.bark_vc_path else None
-            voice_clone_model = ModelLoader(model_dir=bark_vc_model)
+            voice_clone_model = ModelLoader(model_dir=bark_vc_model, gpu_id=device)
         elif config.clone_model is not None and config.clone_model == "elevenlabs/eleven" and config.eleven_api is not None:
             bt.logging.info(f"Using the Voice Clone with the supplied model: {config.clone_model}")
             voice_clone_model = ElevenLabsClone(config.eleven_api)

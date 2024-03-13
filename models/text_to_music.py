@@ -23,9 +23,10 @@ import torch
 import torchaudio
 
 class MusicGenerator:
-    def __init__(self, model_path="facebook/musicgen-medium"):
+    def __init__(self, model_path="facebook/musicgen-medium", gpu_id=0):
         self.model_name = model_path  # Use the provided model path or default to 'facebook/musicgen-medium'
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)  # Ensure that only the specific GPU is visible to this script
         self.processor = AutoProcessor.from_pretrained(self.model_name)
         self.model = MusicgenForConditionalGeneration.from_pretrained(self.model_name)
         self.model.to(self.device)

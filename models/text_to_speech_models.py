@@ -33,11 +33,12 @@ import os
 
 # Text-to-Speech Generation Using Suno Bark's Pretrained Model
 class SunoBark:
-    def __init__(self, model_path="suno/bark"):
+    def __init__(self, model_path="suno/bark", gpu_id=0):
         #Load the processor and model
         self.processor = AutoProcessor.from_pretrained(model_path)
         self.model = BarkModel.from_pretrained(model_path)
-        self.device = torch.device("cuda")
+        self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)  # Ensure that only the specific GPU is visible to this script
         self.speaker_list = ["v2/en_speaker_0","v2/en_speaker_1","v2/en_speaker_2","v2/en_speaker_3","v2/en_speaker_4","v2/en_speaker_5","v2/en_speaker_6","v2/en_speaker_7","v2/en_speaker_8","v2/en_speaker_9"]
         self.model.to(self.device)
     def generate_speech(self, text_input):
@@ -54,10 +55,11 @@ class SunoBark:
     
 
 class EnglishTextToSpeech:
-    def __init__(self, model_path="facebook/mms-tts-eng"):
+    def __init__(self, model_path="facebook/mms-tts-eng", gpu_id=0):
         self.model = VitsModel.from_pretrained(model_path)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.device = torch.device("cuda")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)        
+        self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)  # Ensure that only the specific GPU is visible to this script
 
 
     def generate_speech(self, text_input):

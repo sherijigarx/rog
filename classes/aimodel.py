@@ -20,9 +20,11 @@ import psutil
 import GPUtil
 import subprocess
 from huggingface_hub import hf_hub_download
+from lib import __spec_version__ as version
 
 class AIModelService:
     _scores = None
+    version: int = version
 
     def __init__(self):
         self.config = self.get_config()

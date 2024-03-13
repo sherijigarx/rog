@@ -1726,7 +1726,7 @@ class BarkVoiceCloning:
             raise Exception(f"Audio processing failed: {e}")
         
         # Generate semantic tokens
-        semantic_generator = SemanticGenerator(model_loader.hubert_model, model_loader.tokenizer, processed_audio, model_loader.model)
+        semantic_generator = SemanticGenerator(model_loader.hubert_model, model_loader.tokenizer, processed_audio, model_loader.model, self.device)
         semantic_tokens = semantic_generator.generate_semantic_tokens()
 
         # Encode audio

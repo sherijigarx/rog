@@ -1582,7 +1582,7 @@ def codec_decode(fine_tokens):
 
 
 class ModelLoader:
-   def __init__(self, model_dir=None, gpu_id=0):
+   def __init__(self, model_dir=None): # , gpu_id=0
         self.model_dir = model_dir
         self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         # self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU

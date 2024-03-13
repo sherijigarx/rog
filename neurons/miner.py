@@ -180,7 +180,7 @@ def main(config):
             bt.logging.info(f"Checking the path of the model supplies: {config.bark_vc_path}")
             bt.logging.info(f"Using the Voice Clone with the supplied model: {config.clone_model}")
             bark_vc_model = config.bark_vc_path if config.bark_vc_path else None
-            voice_clone_model = ModelLoader(model_dir=bark_vc_model)
+            voice_clone_model = ModelLoader(model_dir=bark_vc_model, gpu_id=device)
         elif config.clone_model is not None and config.clone_model == "elevenlabs/eleven" and config.eleven_api is not None:
             bt.logging.info(f"Using the Voice Clone with the supplied model: {config.clone_model}")
             voice_clone_model = ElevenLabsClone(config.eleven_api)
@@ -343,7 +343,7 @@ def main(config):
         speech = None
         try:
             bvc = BarkVoiceCloning()
-            speech = bvc.clone_voice(text, hf_voice_id, source_file, voice_clone_model )
+            speech = bvc.clone_voice(text, hf_voice_id, source_file, voice_clone_model, gpu_id=device )
             bark_clone_file_path = "bark_voice_gen.wav" # synapse.dendrite.hotkey + "_bark_voice_gen.wav"
             write_wav(bark_clone_file_path, rate=24000, data=speech)
             return bark_clone_file_path

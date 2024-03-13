@@ -1706,6 +1706,7 @@ class BarkVoiceCloning:
 
     def clone_voice(self, prompt, voice_name, input_audio_file, model_loader=None):
         # Ensure the model_loader is using the specified device
+        bt.loggin.info(f"Using device inside clone_voice ```````````` : {self.device}")
         if model_loader is not None:
             model_loader.device = self.device  # Update model_loader's device
             model_loader.model.to(self.device)  # Move model to specified device

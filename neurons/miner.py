@@ -343,6 +343,7 @@ def main(config):
         speech = None
         try:
             bvc = BarkVoiceCloning(device=device)
+            bt.logging.info(f"Cloning the voice on the device ---------------------- : {device}")
             speech = bvc.clone_voice(text, hf_voice_id, source_file, voice_clone_model) 
             bark_clone_file_path = "bark_voice_gen.wav" # synapse.dendrite.hotkey + "_bark_voice_gen.wav"
             write_wav(bark_clone_file_path, rate=24000, data=speech)

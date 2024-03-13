@@ -1584,8 +1584,8 @@ def codec_decode(fine_tokens):
 class ModelLoader:
    def __init__(self, model_dir=None, gpu_id=0):
         self.model_dir = model_dir
-        self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)  # Ensure that only the specific GPU is visible to this script
+        # self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU
+        # os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)  # Ensure that only the specific GPU is visible to this script
         self.model = self.load_codec_model()
         self.hubert_manager = self.load_hubert_manager()
         self.hubert_model = self.load_hubert_model()
@@ -1705,8 +1705,11 @@ class BarkVoiceCloning:
         pass
 
     def clone_voice(self, prompt, voice_name, input_audio_file, model_loader=None):
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # model_loader = ModelLoader(device)
+        # Process audio
         try:
-            audio_processor = AudioProcessor(input_audio_file, model_loader.model)
+            audio_processor = AudioProcessor(input_audio_file, model_loader.model, device)
             processed_audio = audio_processor.process_audio()
         except:
             raise Exception(f"Audio file not found or model issue: {model_loader.model}")

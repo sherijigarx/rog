@@ -58,7 +58,6 @@ from audiolm_pytorch.utils import curtail_to_multiple
 logging.root.setLevel(logging.ERROR)
 
 
-
 class LayerNorm(nn.Module):
     """ LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False """
 

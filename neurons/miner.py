@@ -142,12 +142,12 @@ def main(config):
         if config.fb_model_path or config.model == "facebook/mms-tts-eng":
             model_path = config.fb_model_path if config.fb_model_path else config.model
             tts_models = EnglishTextToSpeech(model_path=model_path, gpu_id=device)
-            bt.logging.info(f"Using the Facebook TTS model from: {model_path}")
+            bt.logging.info(f"Using the Facebook TTS model from: {model_path} using the device: {device}")
 
         elif config.bark_model_path or config.model == "suno/bark":
             model_path = config.bark_model_path if config.bark_model_path else config.model
             tts_models = SunoBark(model_path=model_path, gpu_id=device)
-            bt.logging.info(f"Using the SunoBark model from: {model_path}")
+            bt.logging.info(f"Using the SunoBark model from: {model_path} using the device: {device}")
 
         elif config.model == "elevenlabs/eleven":
             if config.eleven_api is not None:
@@ -167,9 +167,11 @@ def main(config):
         if config.music_path:
             bt.logging.info(f"Using the custom model path for Text-To-Music: {config.music_path}")
             ttm_models = MusicGenerator(model_path=config.music_path, gpu_id=device)
+            bt.logging.info(f"Using the Text-To-Music with the supplied model: {config.music_path} using the device: {device}")
         elif config.music_model in ["facebook/musicgen-medium", "facebook/musicgen-large"]:
             bt.logging.info(f"Using the Text-To-Music with the supplied model: {config.music_model}")
             ttm_models = MusicGenerator(model_path=config.music_model, gpu_id=device)
+            bt.logging.info(f"Using the Text-To-Music with the supplied model: {config.music_model} using the device: {device}")
         else:
             bt.logging.error(f"Wrong model supplied for Text-To-Music: {config.music_model}")
             exit(1)

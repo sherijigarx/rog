@@ -1704,7 +1704,7 @@ class AudioGenerator:
 
 
 class BarkVoiceCloning:
-    def __init__(self, device='cpu'):
+    def __init__(self, device='cuda'):
         # Initialize the device for the class
         self.device = torch.device(device)
 

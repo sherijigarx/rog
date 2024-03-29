@@ -638,14 +638,15 @@ def main(config):
     axon.attach(
         forward_fn= ProcessClone, 
         blacklist_fn= vc_blacklist_fn, 
-        priority_fn= vc_priority_fn).attach(
-        forward_fn= ProcessSpeech,
-        blacklist_fn= speech_blacklist_fn,
-        priority_fn= speech_priority_fn,).attach(
-        forward_fn= ProcessMusic,
-        blacklist_fn= music_blacklist_fn,
-        priority_fn= music_priority_fn,
-    )
+        priority_fn= vc_priority_fn)
+    # .attach(
+    #     forward_fn= ProcessSpeech,
+    #     blacklist_fn= speech_blacklist_fn,
+    #     priority_fn= speech_priority_fn,).attach(
+    #     forward_fn= ProcessMusic,
+    #     blacklist_fn= music_blacklist_fn,
+    #     priority_fn= music_priority_fn,
+    # )
 
     # Serve passes the axon information to the network + netuid we are hosting on.
     # This will auto-update if the axon port of external ip have changed.

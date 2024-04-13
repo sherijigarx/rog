@@ -827,9 +827,9 @@ def _get_ckpt_path(model_type, use_small=False, path=None):
     return os.path.join(path, f"{model_name}")
 
 
-def _grab_best_device(use_gpu=True):
+def _grab_best_device(use_gpu=True, device=None):
     if torch.cuda.device_count() > 0 and use_gpu:
-        device = "cuda"
+        device = "cuda:{0}".format(device) if device is not None else "cuda"
     elif torch.backends.mps.is_available() and use_gpu and GLOBAL_ENABLE_MPS:
         device = "mps"
     else:
@@ -1022,10 +1022,10 @@ def load_model(use_gpu=True, use_small=False, force_reload=False, model_type="te
     return models[model_key]
 
 
-def load_codec_model(use_gpu=True, force_reload=False):
+def load_codec_model(use_gpu=True, force_reload=False, device=None):
     global models
     global models_devices
-    device = _grab_best_device(use_gpu=use_gpu)
+    device = _grab_best_device(use_gpu=use_gpu, device=device)
     if device == "mps":
         # encodec doesn't support mps
         device = "cpu"
@@ -1593,7 +1593,7 @@ class ModelLoader:
 
 
    def load_codec_model(self):
-       return load_codec_model(use_gpu=True if self.device == 'cuda' else False)
+       return load_codec_model(device=self.device)
 
    def load_hubert_manager(self):
        hubert_manager = HuBERTManager()
@@ -1614,7 +1614,7 @@ class ModelLoader:
            model_path = os.path.join(self.model_dir, 'quantifier_hubert_base_ls960_14.pth')
        else:
             model_path = HuBERTManager.make_sure_tokenizer_installed()
-       return CustomTokenizer.load_from_checkpoint(model_path).to(self.device)
+       return CustomTokenizer.load_from_checkpoint(model_path, self.device) #.to(self.device)
    
 
 class AudioProcessor:

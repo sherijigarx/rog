@@ -1623,6 +1623,7 @@ class AudioProcessor:
       self.model = model
       self.device = device
       self.wav, self.sr = torchaudio.load(self.filepath)
+      bt.logging.info(f"Using device inside AudioProcessor ```````````` : {self.device}")
 
   def process_audio(self):
       self.wav = convert_audio(self.wav, self.sr, self.model.sample_rate, self.model.channels)
@@ -1632,11 +1633,12 @@ class AudioProcessor:
 
 class SemanticGenerator:
    def __init__(self, hubert_model, tokenizer, wav, model, device):
-       self.hubert_model = hubert_model.to(device)
-       self.tokenizer = tokenizer.to(device)
-       self.wav = wav.to(device)
-       self.model = model.to(device)
        self.device = device  # Make sure to add and use the device attribute
+       self.hubert_model = hubert_model.to(self.device)
+       self.tokenizer = tokenizer.to(self.device)
+       self.wav = wav.to(self.device)
+       self.model = model.to(self.device)
+       bt.logging.info(f"Using device inside SemanticGenerator ```````````` : {self.device}")
 
    def generate_semantic_tokens(self):
        # Ensure device is used properly within methods

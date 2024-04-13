@@ -1603,7 +1603,7 @@ class ModelLoader:
         print(f"Using device: {cls.DEVICE}")
 
     def load_codec_model(self):
-        return load_codec_model(device=ModelLoader.DEVICE)
+        return load_codec_model()
 
     def load_hubert_manager(self):
         hubert_manager = HuBERTManager()

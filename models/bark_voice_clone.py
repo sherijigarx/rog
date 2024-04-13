@@ -1707,8 +1707,9 @@ class AudioGenerator:
 class BarkVoiceCloning:
     def __init__(self, device='cuda'):
         # Initialize the device for the class
+        bt.logging.info(f"Using device inside bark_voice_cloning ```````````` : {device}")
         self.device = torch.device(device)
-
+        bt.logging.info(f"Using device inside as self.device bark_voice_cloning ```````````` : {self.device}")
     def clone_voice(self, prompt, voice_name, input_audio_file, model_loader=None):
         # Ensure the model_loader is using the specified device
         bt.logging.info(f"Using device inside clone_voice ```````````` : {self.device}")

@@ -243,7 +243,7 @@ class GPT(nn.Module):
             past_length = past_kv[0][0].size(-2)
 
         if position_ids is None:
-            position_ids = torch.arange(past_length, t + past_length, dtype=torch.long, device=device)
+            position_ids = torch.arange(past_length, t + past_length, dtype=torch.long, device=ModelLoader.DEVICE)
             position_ids = position_ids.unsqueeze(0) # shape (1, t)
             assert position_ids.shape == (1, t)
 
@@ -379,7 +379,7 @@ class FineGPT(GPT):
         ), f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
         assert pred_idx > 0, "cannot predict 0th codebook"
         assert codes == self.n_codes_total, (b, t, codes)
-        pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0)  # shape (1, t)
+        pos = torch.arange(0, t, dtype=torch.long, device=ModelLoader.DEVICE).unsqueeze(0)  # shape (1, t)
 
         # forward the GPT model itself
         tok_embs = [
@@ -477,7 +477,7 @@ class CustomHubert(nn.Module):
         self.output_layer = output_layer
 
         if device is not None:
-            self.to(device)
+            self.to(ModelLoader.DEVICE)
 
         model_path = Path(checkpoint_path)
 
@@ -488,7 +488,7 @@ class CustomHubert(nn.Module):
         model, *_ = fairseq.checkpoint_utils.load_model_ensemble_and_task(load_model_input)
 
         if device is not None:
-            model[0].to(device)
+            model[0].to(ModelLoader.DEVICE)
 
         self.model = model[0]
         self.model.eval()
@@ -523,7 +523,7 @@ class CustomHubert(nn.Module):
 
         # codebook_indices = self.kmeans.predict(embed.cpu().detach().numpy())
 
-        codebook_indices = torch.from_numpy(embed.cpu().detach().numpy()).to(device)  # .long()
+        codebook_indices = torch.from_numpy(embed.cpu().detach().numpy()).to(ModelLoader.DEVICE)  # .long()
 
         if flatten:
             return codebook_indices
@@ -827,9 +827,9 @@ def _get_ckpt_path(model_type, use_small=False, path=None):
     return os.path.join(path, f"{model_name}")
 
 
-def _grab_best_device(use_gpu=True, device=None):
+def _grab_best_device(use_gpu=True):
     if torch.cuda.device_count() > 0 and use_gpu:
-        device = "cuda:{0}".format(device) if device is not None else "cuda"
+        device = ModelLoader.DEVICE
     elif torch.backends.mps.is_available() and use_gpu and GLOBAL_ENABLE_MPS:
         device = "mps"
     else:
@@ -908,7 +908,7 @@ def _load_model(ckpt_path, device, use_small=False, model_type="text"):
     if not os.path.exists(ckpt_path):
         logger.info(f"{model_type} model not found, downloading into `{CACHE_DIR}`.")
         _download(model_info["repo_id"], model_info["file_name"], ckpt_path)
-    checkpoint = torch.load(ckpt_path, map_location=device)
+    checkpoint = torch.load(ckpt_path, map_location=ModelLoader.DEVICE)
     # this is a hack
     # check if config.json is in the same directory as the checkpoint
     # if so, load it
@@ -975,7 +975,7 @@ def _load_model(ckpt_path, device, use_small=False, model_type="text"):
         val_loss = checkpoint["best_val_loss"].item()
         logger.info(f"model loaded: {round(n_params/1e6,1)}M params, {round(val_loss,3)} loss")
     model.eval()
-    model.to(device)
+    model.to(ModelLoader.DEVICE)
     del checkpoint, state_dict
     _clear_cuda_cache()
     if model_type == "text":
@@ -991,7 +991,7 @@ def _load_codec_model(device):
     model = EncodecModel.encodec_model_24khz()
     model.set_target_bandwidth(6.0)
     model.eval()
-    model.to(device)
+    model.to(ModelLoader.DEVICE)
     _clear_cuda_cache()
     return model
 
@@ -1022,10 +1022,10 @@ def load_model(use_gpu=True, use_small=False, force_reload=False, model_type="te
     return models[model_key]
 
 
-def load_codec_model(use_gpu=True, force_reload=False, device=None):
+def load_codec_model(use_gpu=True, force_reload=False):
     global models
     global models_devices
-    device = _grab_best_device(use_gpu=use_gpu, device=device)
+    device = _grab_best_device(use_gpu=use_gpu)
     if device == "mps":
         # encodec doesn't support mps
         device = "cpu"
@@ -1580,42 +1580,52 @@ def codec_decode(fine_tokens):
     return audio_arr
 
 
-
 class ModelLoader:
-   def __init__(self, model_dir=None, gpu_id=0):
+    # Class attribute to store the device information
+    DEVICE = None
+
+    def __init__(self, model_dir=None, gpu_id=0):
+        if ModelLoader.DEVICE is None:
+            # Only set the DEVICE once, and before any GPU operations
+            ModelLoader.set_device(gpu_id)
+
         self.model_dir = model_dir
-        self.device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")  # Updated to use specific GPU
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)  # Ensure that only the specific GPU is visible to this script
         self.model = self.load_codec_model()
         self.hubert_manager = self.load_hubert_manager()
         self.hubert_model = self.load_hubert_model()
         self.tokenizer = self.load_tokenizer()
 
+    @classmethod
+    def set_device(cls, gpu_id):
+        # This method allows setting the device dynamically
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
+        cls.DEVICE = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {cls.DEVICE}")
 
-   def load_codec_model(self):
-       return load_codec_model(device=self.device)
+    def load_codec_model(self):
+        return load_codec_model(device=ModelLoader.DEVICE)
 
-   def load_hubert_manager(self):
-       hubert_manager = HuBERTManager()
-       hubert_manager.make_sure_hubert_installed()
-       hubert_manager.make_sure_tokenizer_installed()
-       return hubert_manager
+    def load_hubert_manager(self):
+        hubert_manager = HuBERTManager()
+        hubert_manager.make_sure_hubert_installed()
+        hubert_manager.make_sure_tokenizer_installed()
+        return hubert_manager
 
-   def load_hubert_model(self):
+    def load_hubert_model(self):
         if self.model_dir:
             model_path = os.path.join(self.model_dir, 'hubert.pt')  # Adjust the filename as needed
         else:
             model_path = HuBERTManager.make_sure_hubert_installed()  # This assumes the method downloads or locates the model
-        return CustomHubert(checkpoint_path=model_path).to(self.device)
+        return CustomHubert(checkpoint_path=model_path).to(ModelLoader.DEVICE)
 
 
-   def load_tokenizer(self):
-       if self.model_dir:
-           model_path = os.path.join(self.model_dir, 'quantifier_hubert_base_ls960_14.pth')
-       else:
+    def load_tokenizer(self):
+        if self.model_dir:
+            model_path = os.path.join(self.model_dir, 'quantifier_hubert_base_ls960_14.pth')
+        else:
             model_path = HuBERTManager.make_sure_tokenizer_installed()
-       return CustomTokenizer.load_from_checkpoint(model_path, self.device) #.to(self.device)
-   
+        return CustomTokenizer.load_from_checkpoint(model_path, ModelLoader.DEVICE) #.to(ModelLoader.DEVICE)
+
 
 class AudioProcessor:
   def __init__(self, filepath, model, device):
@@ -1623,26 +1633,26 @@ class AudioProcessor:
       self.model = model
       self.device = device
       self.wav, self.sr = torchaudio.load(self.filepath)
-      bt.logging.info(f"Using device inside AudioProcessor ```````````` : {self.device}")
+      bt.logging.info(f"Using device inside AudioProcessor ```````````` : {ModelLoader.DEVICE}")
 
   def process_audio(self):
       self.wav = convert_audio(self.wav, self.sr, self.model.sample_rate, self.model.channels)
-      self.wav = self.wav.to(self.device)
+      self.wav = self.wav.to(ModelLoader.DEVICE)
       return self.wav
 
 
 class SemanticGenerator:
    def __init__(self, hubert_model, tokenizer, wav, model, device):
        self.device = device  # Make sure to add and use the device attribute
-       self.hubert_model = hubert_model.to(self.device)
-       self.tokenizer = tokenizer.to(self.device)
-       self.wav = wav.to(self.device)
-       self.model = model.to(self.device)
-       bt.logging.info(f"Using device inside SemanticGenerator ```````````` : {self.device}")
+       self.hubert_model = hubert_model.to(ModelLoader.DEVICE)
+       self.tokenizer = tokenizer.to(ModelLoader.DEVICE)
+       self.wav = wav.to(ModelLoader.DEVICE)
+       self.model = model.to(ModelLoader.DEVICE)
+       bt.logging.info(f"Using device inside SemanticGenerator ```````````` : {ModelLoader.DEVICE}")
 
    def generate_semantic_tokens(self):
        # Ensure device is used properly within methods
-       self.wav = self.wav.to(self.device)  # Ensure the data is on the correct device
+       self.wav = self.wav.to(ModelLoader.DEVICE)  # Ensure the data is on the correct device
        semantic_vectors = self.hubert_model.forward(self.wav, input_sample_hz=self.model.sample_rate)
        semantic_tokens = self.tokenizer.get_token(semantic_vectors)
        return semantic_tokens
@@ -1711,25 +1721,25 @@ class BarkVoiceCloning:
         # Initialize the device for the class
         bt.logging.info(f"Using device inside bark_voice_cloning ```````````` : {device}")
         self.device = torch.device(device)
-        bt.logging.info(f"Using device inside as self.device bark_voice_cloning ```````````` : {self.device}")
+        bt.logging.info(f"Using device inside as self.device bark_voice_cloning ```````````` : {ModelLoader.DEVICE}")
     def clone_voice(self, prompt, voice_name, input_audio_file, model_loader=None):
         # Ensure the model_loader is using the specified device
-        bt.logging.info(f"Using device inside clone_voice ```````````` : {self.device}")
+        bt.logging.info(f"Using device inside clone_voice ```````````` : {ModelLoader.DEVICE}")
         if model_loader is not None:
-            model_loader.device = self.device  # Update model_loader's device
-            model_loader.model.to(self.device)  # Move model to specified device
-            model_loader.hubert_model.to(self.device)
-            model_loader.tokenizer.to(self.device)
+            model_loader.device = ModelLoader.DEVICE  # Update model_loader's device
+            model_loader.model.to(ModelLoader.DEVICE)  # Move model to specified device
+            model_loader.hubert_model.to(ModelLoader.DEVICE)
+            model_loader.tokenizer.to(ModelLoader.DEVICE)
         
         # Process audio
         try:
-            audio_processor = AudioProcessor(input_audio_file, model_loader.model, self.device)
+            audio_processor = AudioProcessor(input_audio_file, model_loader.model, ModelLoader.DEVICE)
             processed_audio = audio_processor.process_audio()
         except Exception as e:
             raise Exception(f"Audio processing failed: {e}")
         
         # Generate semantic tokens
-        semantic_generator = SemanticGenerator(model_loader.hubert_model, model_loader.tokenizer, processed_audio, model_loader.model, self.device)
+        semantic_generator = SemanticGenerator(model_loader.hubert_model, model_loader.tokenizer, processed_audio, model_loader.model, ModelLoader.DEVICE)
         semantic_tokens = semantic_generator.generate_semantic_tokens()
 
         # Encode audio

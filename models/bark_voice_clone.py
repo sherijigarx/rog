@@ -991,7 +991,7 @@ def _load_codec_model(device):
     model = EncodecModel.encodec_model_24khz()
     model.set_target_bandwidth(6.0)
     model.eval()
-    model.to(ModelLoader.DEVICE)
+    model.to(device)
     _clear_cuda_cache()
     return model
 
